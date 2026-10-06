@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><title>Space Colonizers</title>
+<style>
+body{background:#050811;color:#fff;font-family:sans-serif;margin:0;padding:10px;display:flex;flex-direction:column;align-items:center}
+.panel{background:#111827;padding:10px 20px;border-radius:8px;display:flex;gap:15px;font-size:0.9rem;margin-bottom:15px;flex-wrap:wrap;justify-content:center}
+.g{color:#3fb950;font-weight:bold}.d{color:#d2a8ff;font-weight:bold}.c{color:#58a6ff;font-weight:bold}.b{color:#f0883e;font-weight:bold}
+.layout{display:flex;gap:15px;width:100%;max-width:1000px}
+.box{flex:1;background:#111827;border-radius:10px;padding:15px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.ship{width:80px;height:120px;background:linear-gradient(135deg,#58a6ff,#1f6feb);clip-path:polygon(50% 0%,100% 80%,80% 100%,20% 100%,0% 80%);cursor:pointer;margin:10px 0}
+.prog{width:100%;background:#21262d;border-radius:8px;height:12px;margin:8px 0 4px 0;position:relative;overflow:hidden}
+.bar{height:100%;background:linear-gradient(90deg,#1f6feb,#3fb950);width:0%}
+.shop{flex:1.2;max-height:600px;overflow-y:auto;text-align:left}
+.item{background:#161b22;border:1px solid #30363d;padding:8px 12px;border-radius:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+button{background:#238636;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer}
+button:disabled{background:#353d48;cursor:not-allowed}
+.tabs{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+.tab{background:#21262d;color:#c9d1d9;border:none;padding:6px 10px;border-radius:4px;cursor:pointer}
+.tab.active{background:#1f6feb;color:#fff}
+.shop-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;background:#161b22;padding:5px 10px;border-radius:6px;gap:5px;flex-wrap:wrap}
+.buy-modes{display:flex;gap:3px;margin-bottom:8px;justify-content:center}
+.buy-mode-btn{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:4px 8px;font-size:0.8rem;border-radius:4px;cursor:pointer}
+.buy-mode-btn.active{background:#1f6feb;color:#fff;border-color:#58a6ff}
+</style>
+</head>
+<body>
+<div class="panel">
+<div>Gold: <span id="g" class="g">500</span></div>
+<div>CPS: <span id="cp" class="c">100</span>/s</div>
+<div>Boost: <span id="bo" class="b">1.00x</span></div>
+<div>Rebirth: <span id="rb" style="color:#a371f7;font-weight:bold">1x</span></div>
+<div>DM: <span id="dm" class="d">500</span></div>
+<div><button onclick="localStorage.removeItem('scSave');location.reload()" style="background:#da3633;padding:3px 8px;font-size:0.8rem">Wipe Save</button></div>
+</div>
+<div class="layout">
+<div class="box">
+<h3>🚀 Fleet Command</h3>
+<div>Target: <span id="tn" class="b">Moon</span></div>
+<div style="background:#161b22;padding:8px 12px;border-radius:8px;margin:5px 0;width:100%;box-sizing:border-box">
+  <div id="md" style="font-size:1.6rem;color:#58a6ff;font-weight:bold">0 km</div>
+  <div id="mspeed" style="font-size:0.9rem;color:#8b949e;margin-top:2px">0 km/s</div>
+</div>
+<div class="prog"><div id="pb" class="bar"></div></div>
+<div style="font-size:0.85rem;color:#c9d1d9;margin-bottom:6px">Progress: <span id="pcent" class="c">0.00%</span></div>
+<div class="ship" id="sb"></div>
+<div id="bhSpawnContainer" style="display:none;margin-top:5px"><button onclick="gm.bhActive=false;gm.bhDur=20;document.getElementById('bhSpawnContainer').style.display='none'" style="background:#d2a8ff;color:#000;font-weight:bold">🕳 Click Black Hole!</button></div>
+<div style="background:#161b22;padding:8px;border-radius:6px;width:100%;box-sizing:border-box;margin-top:10px">
+<small id="rst">Requires Planet 15</small><br>
+<button id="rbn" style="background:#a371f7;width:100%;margin-top:5px" onclick="rebirth()" disabled>Rebirth</button>
+</div>
+</div>
+<div class="box shop">
+<div class="tabs">
+<button class="tab active" onclick="st('p',this)">Parts</button>
+<button class="tab" onclick="st('tps',this)">Taps</button>
+<button class="tab" onclick="st('s',this)">Skills</button>
+<button class="tab" onclick="st('d',this)">DM</button>
+</div>
+<div id="tp">
+<div class="shop-nav" style="flex-direction:column;align-items:stretch">
+  <div class="buy-modes">
+    <button class="buy-mode-btn active" onclick="setBM(1,this)">x1</button>
+    <button class="buy-mode-btn" onclick="setBM(10,this)">x10</button>
+    <button class="buy-mode-btn" onclick="setBM(100,this)">x100</button>
+    <button class="buy-mode-btn" onclick="setBM('max',this)">x Max</button>
+    <button class="buy-mode-btn" onclick="setBM('next',this)">Next</button>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <button onclick="gm.page=Math.max(0,gm.page-1);render()">◀</button>
+    <span id="pageInd">Page 1</span>
+    <button onclick="gm.page=Math.min(Math.ceil(parts.length/4)-1,gm.page+1);render()">▶</button>
+  </div>
+</div>
+<div id="pl"></div>
+</div>
+<div id="ttps" style="display:none">
+<div class="shop-nav">
+  <button onclick="gm.tPage=Math.max(0,gm.tPage-1);render()">◀ Prev</button>
+  <span id="tapPageInd">Page 1</span>
+  <button onclick="gm.tPage=Math.min(Math.ceil(taps.length/4)-1,gm.tPage+1);render()">Next ▶</button>
+  <button onclick="gm.tbAmt=gm.tbAmt==1?10:gm.tbAmt==10?25:1;render()">Buy: x<span id="tbLbl">1</span></button>
+</div>
+<div id="tpl"></div>
+</div>
+<div id="ts" style="display:none"><div id="sl"></div></div>
+<div id="td" style="display:none"><div id="dl"></div></div>
+</div>
+</div>
+<script>
+let gm={g:500,dm:500,km:0,cp:55,cps:100,pi:0,rm:1,req:15,sm:1,gm:1,cm:1,tpm:1,buyAmt:1,tbAmt:1,page:0,tPage:0,lt:Date.now(),bhTimer:180,bhActive:false,bhDur:0},
+pD=[{n:'Moon',v:30,u:'km'},{n:'Mars',v:90,u:'km'},{n:'Jupiter',v:220,u:'km'},{n:'Saturn',v:880,u:'km'},{n:'Uranus',v:2.87e6,u:'km'},{n:'Neptune',v:4.5e6,u:'km'},{n:'Pluto',v:5.9e6,u:'km'},{n:'Cardinal',v:1.6,u:'Gm'},{n:'Aurelia',v:11.6,u:'Gm'},{n:'Vespera',v:92.7,u:'Gm'},{n:'Chronos',v:741,u:'Gm'},{n:'Zephyr',v:4,u:'TM'},{n:'Onyx',v:25,u:'TM'},{n:'Solaria',v:100,u:'TM'},{n:'Valoria',v:500,u:'TM'},{n:'Elysium',v:2.5,u:'PM'},{n:'Nexus Prime',v:18.8,u:'PM'},{n:'Aetheria',v:149,u:'PM'},{n:'Celestia',v:1.19,u:'ALy'},{n:'Omega Horizon',v:13.6,u:'ALy'},{n:'The Singularity',v:170,u:'ALy'},{n:'Abyss-1',v:2,u:'BLy'},{n:'Abyss-2',v:300,u:'BLy'},{n:'Void-Alpha',v:8,u:'cly'},{n:'The Edge',v:44,u:'cly'},{n:'Beyond-26',v:240,u:'cly'},{n:'Virus',v:1.32,u:'dly'},{n:'Pathogen',v:11,u:'dly'}],
+uM={'km':1,'Mm':1e3,'Gm':1e6,'TM':1e9,'PM':1e12,'ALy':9.46e15,'BLy':9.46e24,'cly':9.46e27,'dly':9.46e30},
+uN=[['dly',9.46e30],['cly',9.46e27],['BLy',9.46e24],['ALy',9.46e15],['PM',1e12],['TM',1e9],['Gm',1e6],['Mm',1e3],['km',1],['k',1e3],['m',1e6],['B',1e9]].sort((a,b)=>b[1]-a[1]),
+units=['dly','ely','fly','gly','hly','ily','jly','kly','lly','mly','nly','oly','ply','qly','rly','sly','tly','uly','vly','wly','xly','yly','zly'],
+planets=(function(){let l=[],a=["Alpha","Prime","Omega","Void","Astral","Quantum","Solar"],n=["Colony","Nexus","Outpost","Reach","Abyss","Core"];pD.forEach((p,i)=>l.push({n:p.n,rk:p.v*(uM[p.u]||1),dv:p.v,u:p.u,id:i+1}));let cv=11,ui=0;for(let i=pD.length+1;i<=140;i++){cv*=(5.5+Math.random()*4.5);if(cv>1000&&ui<units.length-1){cv/=1000;ui++;}let u=units[ui];l.push({n:`${a[i%a.length]} ${n[(i*3)%n.length]}`,rk:cv*(uM[u]||9.46e96)*(1+i*0.05),dv:cv,u:u,id:i});}return l;})(),
+parts=[{id:'r',n:'Rocket Boosters',c:300,cps:100,l:1},{id:'pr',n:'Particle Reactor',c:1500,cps:12,l:0},{id:'s',n:'Solar Station',c:6000,cps:50,l:0},{id:'i',n:'Iron Drive',c:40000,cps:250,l:0},{id:'f',n:'Fission Drive',c:1.5e6,cps:1200,l:0},{id:'fu',n:'Fusion Reactor',c:2e7,cps:8500,l:0},{id:'im',n:'Impulse Engine',c:1.1e8,cps:40000,l:0},{id:'al',n:'Alcubierre Drive',c:5e9,cps:200000,l:0},{id:'ag',n:'Anti-gravity',c:3e11,cps:1200000,l:0},{id:'uw',n:'Ultra Warp',c:1.2e13,cps:7500000,l:0},{id:'th',n:'Thruster',c:6e14,cps:45000000,l:0},{id:'sf',n:'Space Folder',c:30e12,cps:3e8,l:0}],
+taps=[{id:'t1',n:'Quantum Finger',c:100,cpAdd:55,l:1},{id:'t2',n:'Laser Pointer',c:500,cpAdd:5,l:0},{id:'t3',n:'Servo Glove',c:2500,cpAdd:25,l:0},{id:'t4',n:'Hydraulic Tap',c:15000,cpAdd:120,l:0},{id:'t5',n:'Piston Clicker',c:80000,cpAdd:600,l:0},{id:'t6',n:'Plasma Clicker',c:500000,cpAdd:3000,l:0},{id:'t7',n:'Nanobot Tapper',c:3e6,cpAdd:15000,l:0},{id:'t8',n:'Neural Link',c:2e7,cpAdd:80000,l:0},{id:'t9',n:'AI Auto-Clicker',c:1.2e8,cpAdd:450000,l:0},{id:'t10',n:'Quantum Tapper',c:8e8,cpAdd:2500000,l:0},{id:'t11',n:'Singularity Clicker',c:5e9,cpAdd:15000000,l:0},{id:'t12',n:'Cosmic Finger',c:3e10,cpAdd:90000000,l:0}],
+skills=[{id:'od',n:'Overdrive (3x)',c:1.75e8,l:0,d:0,cd:0},{id:'at',n:'Auto Taps',c:5e9,l:0,d:0,cd:0},{id:'pf',n:'Profit Gold',c:5e10,l:0,d:0,cd:0},{id:'pt',n:'Power Tap',c:5e11,l:0,d:0,cd:0},{id:'bh',n:'Black Hole',c:5e12,l:0,d:0,cd:0}],
+dmList=[{id:'bw',n:'BH Warp (4h)',c:100},{id:'fl',n:'Solar Flower',c:500},{id:'sw',n:'Giant Sandworm',c:500}];
+
+function fmt(n){let num=Number(n)||0;if(num<1e3)return Math.floor(num).toLocaleString();let b=uN[uN.length-1];for(let u of uN)if(num>=u[1]){b=u;break;}return(num/b[1]).toFixed(2)+' '+b[0];}
+function fmtD(v){let num=Number(v)||0,b=uN.find(x=>x[0]==='km')||uN[0];for(let u of uN)if(num>=u[1]&&['ALy','BLy','cly','dly','PM','TM','Gm','Mm','km'].includes(u[0])){b=u;break;}return(num/b[1]).toFixed(2)+' '+b[0];}
+function st(t,el){document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));['tp','ttps','ts','td'].forEach(e=>document.getElementById(e).style.display='none');document.getElementById('t'+t).style.display='block';el.classList.add('active');render();}
+function setBM(m,el){gm.buyAmt=m;document.querySelectorAll('.buy-mode-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');render();}
+function getPartInfo(p){
+  let a=1,ms=[10,25,50,75,100,125,150,175,200,225,250,275,300],gNum=Number(gm.g)||0,pC=Number(p.c)||0;
+  if(gm.buyAmt===10)a=10;else if(gm.buyAmt===100)a=100;
+  else if(gm.buyAmt==='max'){let tg=gNum,cur=pC,cnt=0;while(tg>=cur&&cnt<1000){tg-=cur;cur*=1.15;cnt++;}a=Math.max(1,cnt);}
+  else if(gm.buyAmt==='next'){let nxt=ms.find(m=>m>p.l)||p.l+25;a=Math.max(1,nxt-p.l);}
+  let tc=0,cur=pC;for(let i=0;i<a;i++){tc+=cur;cur*=1.15;}
+  return{amt:a,cost:Math.floor(tc)};
+}
+function render(){
+let gNum=Number(gm.g)||0;
+let pH='';parts.slice(gm.page*4,gm.page*4+4).forEach(p=>{let inf=getPartInfo(p);pH+=`<div class="item"><div><b>${p.n}</b><br><small>Lvl:${p.l} | ${fmt(inf.cost)}</small></div><button onclick="buyP('${p.id}')"${gNum<inf.cost?'disabled':''}>Buy ${gm.buyAmt==='max'||gm.buyAmt==='next'?'('+inf.amt+')':gm.buyAmt}</button></div>`;});document.getElementById('pl').innerHTML=pH;
+let tpH='';taps.slice(gm.tPage*4,gm.tPage*4+4).forEach(t=>{let c=0,cur=Number(t.c)||0;for(let i=0;i<gm.tbAmt;i++){c+=cur;cur*=1.15;}c=Math.floor(c);tpH+=`<div class="item"><div><b>${t.n}</b><br><small>Lvl:${t.l} | +${fmt(t.cpAdd)} CP | ${fmt(c)}</small></div><button onclick="buyT('${t.id}')"${gNum<c?'disabled':''}>Buy ${gm.tbAmt}</button></div>`;});document.getElementById('tpl').innerHTML=tpH;document.getElementById('tbLbl').innerText=gm.tbAmt;
+let sH='';skills.forEach(s=>{let st=s.d>0?`Active (${s.d.toFixed(1)}s)`:s.cd>0?`CD (${s.cd.toFixed(0)}s)`:`Ready`;sH+=`<div class="item"><div><b>${s.n}</b><br><small>Lvl:${s.l} | Cost: ${fmt(s.c)} | <b>${st}</b></small></div><div style="display:flex;gap:5px"><button onclick="buyS('${s.id}')"${gNum<Number(s.c)?'disabled':''}>Up</button><button onclick="actS('${s.id}')" style="background:#1f6feb"${s.l<=0||s.d>0||s.cd>0?'disabled':''}>Use</button></div></div>`;});document.getElementById('sl').innerHTML=sH;
+let dH='';dmList.forEach(d=>dH+=`<div class="item"><div><b>${d.n}</b><br><small>${d.c} DM</small></div><button onclick="buyDM('${d.id}')"${Number(gm.dm)<d.c?'disabled':''}>Get</button></div>`);document.getElementById('dl').innerHTML=dH;document.getElementById('pageInd').innerText=`Page ${gm.page+1}`;document.getElementById('tapPageInd').innerText=`Page ${gm.tPage+1}`;
+}
+function buyP(id){
+  let p=parts.find(x=>x.id===id),inf=getPartInfo(p),gNum=Number(gm.g)||0;
+  if(gNum>=inf.cost){
+    gm.g=gNum-inf.cost;
+    for(let i=0;i<inf.amt;i++){p.l++;p.c=Number(p.c)*1.15;}
+    p.c=Math.floor(p.c);calcCps();render();update();save();
+  }
+}
+function buyT(id){
+  let t=taps.find(x=>x.id===id),c=0,cur=Number(t.c)||0,gNum=Number(gm.g)||0;
+  for(let i=0;i<gm.tbAmt;i++){c+=cur;cur*=1.15;}c=Math.floor(c);
+  if(gNum>=c){gm.g=gNum-c;t.l+=gm.tbAmt;t.c=Math.floor(cur);gm.cp=taps.reduce((a,b)=>a+b.cpAdd*b.l,0)*gm.tpm;render();update();save();}
+}
+function buyS(id){let s=skills.find(x=>x.id===id),gNum=Number(gm.g)||0;if(gNum>=Number(s.c)){gm.g=gNum-Number(s.c);s.l++;s.c=Number(s.c)+50000;render();update();save();}}
+function actS(id){let s=skills.find(x=>x.id===id);if(s.l>0&&s.d<=0&&s.cd<=0){s.d=20+(s.l-1)*2;s.cd=240+(s.l-1)*10;render();update();}}
+function buyDM(id){let d=dmList.find(x=>x.id===id),dmNum=Number(gm.dm)||0;if(dmNum>=d.c){gm.dm=dmNum-d.c;if(id==='bw'){let w=gm.cps*14400;gm.g=Number(gm.g)+w;gm.km=Number(gm.km)+w;checkP();}else if(id==='fl')gm.sm*=3;else if(id==='sw')parts.forEach(p=>p.c=Math.floor(Number(p.c)/2));render();update();save();}}
+function calcCps(){
+  let b=0;
+  // Space Folder global multiplier calculation based on milestones (10, 25, 50, 75, 100, 125, 150 up to 300, then 350, 400...)
+  let sf=parts.find(p=>p.id==='sf');
+  let sfL=sf?sf.l:0;
+  let milestones=[10,25,50,75,100,125,150,175,200,225,250,275,300];
+  let nextM=350; while(nextM<=1000){milestones.push(nextM);nextM+=50;}
+  let reachedCount=milestones.filter(m=>sfL>=m).length;
+  // Scales global multiplier between 2.00x and 5.00x based on reached Space Folder milestones
+  let globalMult=reachedCount>0?Math.min(5,1+reachedCount*0.5):1;
+
+  parts.forEach(p=>{
+    let m=1;
+    if(p.l>=25)m*=3;
+    let tm=50;
+    while(tm<=p.l){if(p.l>=tm)m*=1.5;tm+=50;}
+    if(p.id==='sf')m*=3;
+    m*=globalMult; // Apply Space Folder global multiplier to all parts
+    b+=p.cps*p.l*m;
+  });
+  gm.cps=b*gm.rm*(gm.pi>=34?4:1);
+}
+function checkP(){let cp=planets[gm.pi];if(cp&&gm.km>=cp.rk){if(gm.pi>=planets.length-1&&gm.pi+1>=gm.req){gm.km=cp.rk;return;}alert(`Reached ${cp.n}!`);gm.dm=Number(gm.dm)+20;gm.g=Number(gm.g)+(gm.pi+1)*500;gm.pi=Math.min(gm.pi+1,planets.length-1);save();}}
+function rebirth(){if(gm.pi+1>=gm.req){gm.rm*=2;gm.km=0;gm.pi=Math.min(gm.pi+1,planets.length-1);gm.g=500;gm.req++;parts.forEach(p=>p.l=0);taps.forEach(t=>t.l=0);gm.tpm=1;calcCps();render();update();save();}}
+function save(){localStorage.setItem('scSave',JSON.stringify({gm,parts:parts.map(p=>({id:p.id,l:p.l,c:p.c})),taps:taps.map(t=>({id:t.id,l:t.l,c:t.c})),skills:skills.map(s=>({id:s.id,l:s.l,c:s.c}))}));}
+function load(){
+  let r=localStorage.getItem('scSave');if(!r)return;
+  try{
+    let d=JSON.parse(r);Object.assign(gm,d.gm);
+    gm.g=Number(gm.g)||500;gm.dm=Number(gm.dm)||500;gm.km=Number(gm.km)||0;gm.cp=Number(gm.cp)||55;gm.cps=Number(gm.cps)||100;
+    d.parts?.forEach(dp=>{let p=parts.find(x=>x.id===dp.id);if(p){p.l=Number(dp.l)||0;p.c=Number(dp.c)||p.c;}});
+    d.taps?.forEach(dt=>{let t=taps.find(x=>x.id===dt.id);if(t){t.l=Number(dt.l)||0;t.c=Number(dt.c)||t.c;}});
+    d.skills?.forEach(ds=>{let s=skills.find(x=>x.id===ds.id);if(s){s.l=Number(ds.l)||0;s.c=Number(ds.c)||s.c;}});
+  }catch(e){}
+}
+document.getElementById('sb').onclick=()=>{let b=gm.pi>=34?4:1,cpv=gm.cp*b;gm.km=Number(gm.km)+cpv;gm.g=Number(gm.g)+cpv*gm.gm;checkP();update();save();};
+function update(){
+let gNum=Number(gm.g)||0;
+document.getElementById('g').innerText=fmt(gNum);let b=gm.pi>=34?4:1,tc=(gm.cps*gm.sm)*b;document.getElementById('cp').innerText=fmt(tc);
+document.getElementById('bo').innerText=b.toFixed(2)+'x';document.getElementById('rb').innerText=gm.rm+'x';document.getElementById('dm').innerText=fmt(gm.dm);
+let cp=planets[gm.pi];document.getElementById('tn').innerText=`${cp.n} (#${cp.id}/${planets.length})`;
+document.getElementById('md').innerText=fmtD(gm.km);document.getElementById('mspeed').innerText=fmtD(tc)+'/s';
+let rbn=document.getElementById('rbn'),rst=document.getElementById('rst');if(gm.pi+1>=gm.req){rbn.disabled=false;rst.innerHTML='<span style="color:#3fb950">Ready!</span>';}else{rbn.disabled=true;rst.innerText=`Requires Planet ${gm.req}`;}
+let prev=gm.pi===0?0:planets[gm.pi-1].rk,pct=Math.min(100,Math.max(0,((Math.max(0,gm.km-prev))/(cp.rk-prev))*100));
+document.getElementById('pb').style.width=pct+'%';document.getElementById('pcent').innerText=pct.toFixed(2)+'%';
+}
+load();calcCps();render();update();
+setInterval(()=>{gm.lt=Date.now();calcCps();skills.forEach(s=>{if(s.d>0)s.d=Math.max(0,s.d-0.01);if(s.cd>0)s.cd=Math.max(0,s.cd-0.01);});gm.bhTimer-=0.01;if(gm.bhTimer<=0){gm.bhActive=true;document.getElementById('bhSpawnContainer').style.display='block';gm.bhTimer=180;}if(gm.bhDur>0)gm.bhDur-=0.01;let b=gm.pi>=34?4:1,d=0.01*gm.cps*gm.sm*b*(gm.bhDur>0?7:1);if(gm.cps>0){gm.g=Number(gm.g)+d*gm.gm;gm.km=Number(gm.km)+d;checkP();}update();},10);
+setInterval(save,30000);
+</script>
+</body>
+</html>
+
